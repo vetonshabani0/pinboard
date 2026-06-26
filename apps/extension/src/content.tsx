@@ -242,6 +242,12 @@ function App() {
         return true;
       }
 
+      if (message.type === "pinboard:openPanel") {
+        setPanelOpen(true);
+        sendResponse({ ok: true });
+        return true;
+      }
+
       if (message.type === "pinboard:startPin") {
         setPanelOpen(true);
         setDraft(null);
@@ -642,4 +648,3 @@ function mount() {
 }
 
 mount();
-
