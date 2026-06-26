@@ -20,11 +20,30 @@ async function getActiveTab() {
   };
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function sendToTabWithRetry(tabId: number, message: unknown, attempts = 12) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await chrome.tabs.sendMessage(tabId, message);
+    } catch (error) {
+      lastError = error;
+      await wait(120);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Pinboard could not attach to this page.");
+}
+
 async function ensureContentScript(tab: ActiveTab) {
   if (!tab.id) return false;
 
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: "pinboard:ping" });
+    await sendToTabWithRetry(tab.id, { type: "pinboard:ping" }, 2);
     return true;
   } catch {
     if (!canAttachToPage(tab)) {
@@ -46,7 +65,7 @@ async function ensureContentScript(tab: ActiveTab) {
       target: { tabId: tab.id },
       files: ["assets/content.js"]
     });
-    await chrome.tabs.sendMessage(tab.id, { type: "pinboard:ping" });
+    await sendToTabWithRetry(tab.id, { type: "pinboard:ping" });
     return true;
   }
 }
@@ -64,7 +83,7 @@ function App() {
       if (!tab.id) throw new Error("No active tab found.");
 
       await ensureContentScript(tab);
-      await chrome.tabs.sendMessage(tab.id, { type: "pinboard:openPanel" });
+      await sendToTabWithRetry(tab.id, { type: "pinboard:openPanel" });
       setStatus("Pinboard opened on the page.");
       window.setTimeout(() => window.close(), 250);
     } catch (error) {
