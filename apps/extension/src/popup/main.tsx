@@ -31,6 +31,13 @@ async function ensureContentScript(tab: ActiveTab) {
       throw new Error("Open a normal website first.");
     }
 
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        document.getElementById("pinboard-extension-root")?.remove();
+        document.body.classList.remove("pinboard-pin-cursor");
+      }
+    });
     await chrome.scripting.insertCSS({
       target: { tabId: tab.id },
       files: ["assets/content.css"]
@@ -39,6 +46,7 @@ async function ensureContentScript(tab: ActiveTab) {
       target: { tabId: tab.id },
       files: ["assets/content.js"]
     });
+    await chrome.tabs.sendMessage(tab.id, { type: "pinboard:ping" });
     return true;
   }
 }
@@ -83,4 +91,3 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
-
