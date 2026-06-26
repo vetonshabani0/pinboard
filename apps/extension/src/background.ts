@@ -4,11 +4,13 @@ type ApiMessage = {
   payload?: unknown;
 };
 
-type StoredSettings = {
-  apiUrl?: string;
-};
+const PINBOARD_API_URL =
+  (import.meta.env.VITE_PINBOARD_API_URL as string | undefined) ||
+  "https://prestigious-jay-126.eu-west-1.convex.site";
 
-const DEFAULT_API_URL = import.meta.env.VITE_CONVEX_SITE_URL as string | undefined;
+chrome.runtime.onInstalled.addListener(() => {
+  void chrome.sidePanel?.setPanelBehavior({ openPanelOnActionClick: true });
+});
 
 chrome.runtime.onMessage.addListener((message: ApiMessage, _sender, sendResponse) => {
   if (message?.type !== "pinboard:api") {
@@ -23,12 +25,7 @@ chrome.runtime.onMessage.addListener((message: ApiMessage, _sender, sendResponse
 });
 
 async function callApi(endpoint: string, payload: unknown) {
-  const settings = (await chrome.storage.local.get(["apiUrl"])) as StoredSettings;
-  const apiUrl = (settings.apiUrl || DEFAULT_API_URL || "").replace(/\/$/, "");
-
-  if (!apiUrl) {
-    throw new Error("Set your Convex site URL in the Pinboard popup.");
-  }
+  const apiUrl = PINBOARD_API_URL.replace(/\/$/, "");
 
   const response = await fetch(`${apiUrl}${endpoint}`, {
     method: "POST",
@@ -46,4 +43,3 @@ async function callApi(endpoint: string, payload: unknown) {
 
   return body;
 }
-

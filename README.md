@@ -28,10 +28,10 @@ npm run convex:dev
 Copy the Convex site URL ending in `.convex.site` into `.env.local`:
 
 ```bash
-VITE_CONVEX_SITE_URL=https://your-deployment.convex.site
+VITE_PINBOARD_API_URL=https://your-deployment.convex.site
 ```
 
-If `npx convex dev` created `CONVEX_SITE_URL`, use the same value with the `VITE_` prefix for the browser apps.
+If `npx convex dev` created `CONVEX_SITE_URL`, use the same value as `VITE_PINBOARD_API_URL` for the browser apps. The current dev backend is also baked into the extension fallback, so local testing does not require pasting a backend URL into the extension UI.
 
 Then run:
 

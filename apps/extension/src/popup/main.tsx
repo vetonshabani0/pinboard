@@ -5,7 +5,6 @@ import { pinboardApi } from "../extensionApi";
 import "./styles.css";
 
 type Settings = {
-  apiUrl?: string;
   authorName?: string;
   enabled?: boolean;
   shareCode?: string;
@@ -19,7 +18,7 @@ function App() {
 
   useEffect(() => {
     void chrome.storage.local
-      .get(["apiUrl", "authorName", "enabled", "shareCode"])
+      .get(["authorName", "enabled", "shareCode"])
       .then((value) => setSettings(value as Settings));
   }, []);
 
@@ -40,6 +39,31 @@ function App() {
     }
   };
 
+  const getActiveTabUrl = async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab?.url;
+  };
+
+  const copyText = async (value: string, message: string) => {
+    await navigator.clipboard.writeText(value);
+    setStatus(message);
+  };
+
+  const copyPageLink = async () => {
+    if (!settings.shareCode) return;
+
+    const tabUrl = await getActiveTabUrl();
+    if (!tabUrl) return;
+
+    try {
+      const url = new URL(tabUrl);
+      url.hash = `pinboard=${settings.shareCode}`;
+      await copyText(url.toString(), "Copied review link");
+    } catch {
+      await copyText(settings.shareCode, "Copied review code");
+    }
+  };
+
   const createSession = async () => {
     setStatus("Creating review...");
 
@@ -57,7 +81,7 @@ function App() {
         shareCode: response.session.shareCode,
         enabled: true
       });
-      setStatus(`Created ${response.session.shareCode}`);
+      setStatus(`Created review ${response.session.shareCode}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not create review");
     }
@@ -83,7 +107,7 @@ function App() {
       <header>
         <div>
           <h1>Pinboard</h1>
-          <p>Shared pins for website feedback.</p>
+          <p>Drop shared feedback pins on this page.</p>
         </div>
         <label className="switch">
           <input
@@ -95,14 +119,26 @@ function App() {
         </label>
       </header>
 
-      <label>
-        Convex site URL
-        <input
-          onChange={(event) => void saveSettings({ apiUrl: event.target.value })}
-          placeholder="https://name.convex.site"
-          value={settings.apiUrl || ""}
-        />
-      </label>
+      {settings.shareCode ? (
+        <section className="active-review">
+          <div>
+            <span>Active review</span>
+            <strong>{settings.shareCode}</strong>
+          </div>
+          <div className="button-row">
+            <button
+              className="secondary"
+              onClick={() => void copyText(settings.shareCode!, "Copied review code")}
+              type="button"
+            >
+              Copy code
+            </button>
+            <button className="secondary" onClick={() => void copyPageLink()} type="button">
+              Copy link
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <label>
         Your name
@@ -141,17 +177,9 @@ function App() {
         </button>
       </section>
 
-      {settings.shareCode ? (
-        <div className="current">
-          <span>Current code</span>
-          <strong>{settings.shareCode}</strong>
-        </div>
-      ) : null}
-
       {status ? <p className="status">{status}</p> : null}
     </main>
   );
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
-

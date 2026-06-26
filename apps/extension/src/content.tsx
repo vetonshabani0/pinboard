@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { PinboardComment } from "@pinboard/shared";
+import { normalizeShareCode, type PinboardComment } from "@pinboard/shared";
 import { pinboardApi } from "./extensionApi";
 import "./content.css";
 
@@ -52,6 +52,13 @@ function isPinboardTarget(target: EventTarget | null) {
   return target instanceof HTMLElement && Boolean(target.closest("[data-pinboard-ui='true']"));
 }
 
+function getShareCodeFromHash() {
+  const hash = window.location.hash.replace(/^#/, "");
+  const code = new URLSearchParams(hash).get("pinboard");
+
+  return code ? normalizeShareCode(code) : "";
+}
+
 function App() {
   const [settings, setSettings] = useState<StorageState>({});
   const [comments, setComments] = useState<PinboardComment[]>([]);
@@ -99,6 +106,15 @@ function App() {
   }, [settings.enabled, settings.shareCode]);
 
   useEffect(() => {
+    const codeFromLink = getShareCodeFromHash();
+
+    if (codeFromLink) {
+      void chrome.storage.local.set({
+        enabled: true,
+        shareCode: codeFromLink
+      });
+    }
+
     void loadSettings();
 
     const onStorageChanged = () => void loadSettings();
@@ -291,4 +307,3 @@ function mount() {
 }
 
 mount();
-

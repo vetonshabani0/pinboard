@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import { normalizeShareCode, type PinboardComment } from "@pinboard/shared";
 import "./styles.css";
 
-const DEFAULT_API_URL = import.meta.env.VITE_CONVEX_SITE_URL as string | undefined;
+const DEFAULT_API_URL =
+  (import.meta.env.VITE_PINBOARD_API_URL as string | undefined) ||
+  "https://prestigious-jay-126.eu-west-1.convex.site";
 
 async function api<T>(apiUrl: string, endpoint: string, payload?: unknown): Promise<T> {
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}${endpoint}`, {
@@ -25,7 +27,9 @@ async function api<T>(apiUrl: string, endpoint: string, payload?: unknown): Prom
 
 function App() {
   const [apiUrl, setApiUrl] = useState(DEFAULT_API_URL || "");
-  const [shareCode, setShareCode] = useState("");
+  const [shareCode, setShareCode] = useState(
+    normalizeShareCode(new URLSearchParams(window.location.search).get("code") || "")
+  );
   const [comments, setComments] = useState<PinboardComment[]>([]);
   const [status, setStatus] = useState("");
 
@@ -146,4 +150,3 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
-
