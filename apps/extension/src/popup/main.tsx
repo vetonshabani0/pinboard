@@ -7,6 +7,8 @@ type ActiveTab = {
   url?: string;
 };
 
+const OPEN_PANEL_KEY = "pinboardOpenPanelRequest";
+
 function canAttachToPage(tab: ActiveTab) {
   return Boolean(tab.id && tab.url && /^https?:\/\//.test(tab.url));
 }
@@ -65,7 +67,6 @@ async function ensureContentScript(tab: ActiveTab) {
       target: { tabId: tab.id },
       files: ["assets/content.js"]
     });
-    await sendToTabWithRetry(tab.id, { type: "pinboard:ping" });
     return true;
   }
 }
@@ -82,8 +83,8 @@ function App() {
       const tab = await getActiveTab();
       if (!tab.id) throw new Error("No active tab found.");
 
+      await chrome.storage.local.set({ [OPEN_PANEL_KEY]: Date.now() });
       await ensureContentScript(tab);
-      await sendToTabWithRetry(tab.id, { type: "pinboard:openPanel" });
       setStatus("Pinboard opened on the page.");
       window.setTimeout(() => window.close(), 250);
     } catch (error) {

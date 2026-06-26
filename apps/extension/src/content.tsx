@@ -21,6 +21,7 @@ type DraftPin = {
 type ApiComment = PinboardComment & { _id?: string };
 
 const rootId = "pinboard-extension-root";
+const openPanelKey = "pinboardOpenPanelRequest";
 
 function getPageMeta() {
   return {
@@ -110,8 +111,18 @@ function App() {
   );
 
   const loadSettings = useCallback(async () => {
-    const next = await chrome.storage.local.get(["enabled", "shareCode", "authorName"]);
+    const next = await chrome.storage.local.get([
+      "enabled",
+      "shareCode",
+      "authorName",
+      openPanelKey
+    ]);
     setSettings(next as StorageState);
+
+    if (next[openPanelKey]) {
+      setPanelOpen(true);
+      void chrome.storage.local.remove(openPanelKey);
+    }
   }, []);
 
   const saveSettings = async (next: StorageState) => {
@@ -158,7 +169,14 @@ function App() {
 
     void loadSettings();
 
-    const onStorageChanged = () => void loadSettings();
+    const onStorageChanged = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if (changes[openPanelKey]?.newValue) {
+        setPanelOpen(true);
+        void chrome.storage.local.remove(openPanelKey);
+      }
+
+      void loadSettings();
+    };
     chrome.storage.onChanged.addListener(onStorageChanged);
 
     return () => chrome.storage.onChanged.removeListener(onStorageChanged);
