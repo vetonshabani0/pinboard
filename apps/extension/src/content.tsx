@@ -85,7 +85,7 @@ function formatAge(timestamp: number) {
 function App() {
   const [settings, setSettings] = useState<StorageState>({});
   const [comments, setComments] = useState<PinboardComment[]>([]);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [draft, setDraft] = useState<DraftPin | null>(null);
   const [draftText, setDraftText] = useState("");

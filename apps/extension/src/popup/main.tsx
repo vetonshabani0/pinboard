@@ -22,53 +22,30 @@ async function getActiveTab() {
   };
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-async function sendToTabWithRetry(tabId: number, message: unknown, attempts = 12) {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      return await chrome.tabs.sendMessage(tabId, message);
-    } catch (error) {
-      lastError = error;
-      await wait(120);
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error("Pinboard could not attach to this page.");
-}
-
-async function ensureContentScript(tab: ActiveTab) {
+async function openDrawerOnPage(tab: ActiveTab) {
   if (!tab.id) return false;
 
-  try {
-    await sendToTabWithRetry(tab.id, { type: "pinboard:ping" }, 2);
-    return true;
-  } catch {
-    if (!canAttachToPage(tab)) {
-      throw new Error("Open a normal website first.");
-    }
-
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        document.getElementById("pinboard-extension-root")?.remove();
-        document.body.classList.remove("pinboard-pin-cursor");
-      }
-    });
-    await chrome.scripting.insertCSS({
-      target: { tabId: tab.id },
-      files: ["assets/content.css"]
-    });
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["assets/content.js"]
-    });
-    return true;
+  if (!canAttachToPage(tab)) {
+    throw new Error("Open a normal website first.");
   }
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      document.getElementById("pinboard-extension-root")?.remove();
+      document.body.classList.remove("pinboard-pin-cursor");
+    }
+  });
+  await chrome.scripting.insertCSS({
+    target: { tabId: tab.id },
+    files: ["assets/content.css"]
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["assets/content.js"]
+  });
+
+  return true;
 }
 
 function App() {
@@ -84,7 +61,7 @@ function App() {
       if (!tab.id) throw new Error("No active tab found.");
 
       await chrome.storage.local.set({ [OPEN_PANEL_KEY]: Date.now() });
-      await ensureContentScript(tab);
+      await openDrawerOnPage(tab);
       await chrome.storage.local.set({ [OPEN_PANEL_KEY]: Date.now() });
       setStatus("Pinboard opened on the page.");
       window.setTimeout(() => window.close(), 900);
