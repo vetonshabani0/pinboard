@@ -1,0 +1,29 @@
+{
+  "name": "pinboard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Drop shared design feedback pins on any webpage.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:extension": "npm --workspace @pinboard/extension run build",
+    "build:web": "npm --workspace @pinboard/web run build",
+    "dev:extension": "npm --workspace @pinboard/extension run dev",
+    "dev:web": "npm --workspace @pinboard/web run dev",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "dependencies": {
+    "convex": "^1.17.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
+
