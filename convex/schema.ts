@@ -21,6 +21,16 @@ export default defineSchema({
     viewportHeight: v.number(),
     elementLabel: v.optional(v.string()),
     text: v.string(),
+    replies: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          authorName: v.string(),
+          createdAt: v.number()
+        })
+      )
+    ),
     authorName: v.string(),
     status: v.union(v.literal("open"), v.literal("resolved")),
     createdAt: v.number(),
@@ -29,4 +39,3 @@ export default defineSchema({
     .index("by_session", ["sessionId"])
     .index("by_session_and_path", ["sessionId", "origin", "path"])
 });
-

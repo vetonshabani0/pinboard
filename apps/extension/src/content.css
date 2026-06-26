@@ -107,11 +107,10 @@
   transform: translate(12px, 12px);
 }
 
-.pinboard-composer textarea {
+.pinboard-composer textarea,
+.pinboard-reply-box input {
   display: block;
   width: 100%;
-  min-height: 104px;
-  resize: vertical;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background: #ffffff;
@@ -121,6 +120,11 @@
   line-height: 1.45;
   outline: none;
   padding: 10px;
+}
+
+.pinboard-composer textarea {
+  min-height: 104px;
+  resize: vertical;
 }
 
 .pinboard-actions {
@@ -136,6 +140,33 @@
   font-size: 13px;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.pinboard-reply {
+  border-left: 2px solid #bfdbfe;
+  margin: 0 0 10px;
+  padding-left: 10px;
+}
+
+.pinboard-reply p {
+  margin-bottom: 2px;
+}
+
+.pinboard-reply span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.pinboard-reply-box {
+  display: grid;
+  grid-template-columns: 1fr 36px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pinboard-reply-box input {
+  min-height: 36px;
+  padding: 0 10px;
 }
 
 .pinboard-meta {

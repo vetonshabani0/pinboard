@@ -1,5 +1,12 @@
 export type PinboardStatus = "open" | "resolved";
 
+export type PinboardReply = {
+  id: string;
+  text: string;
+  authorName: string;
+  createdAt: number;
+};
+
 export type PinboardSession = {
   id: string;
   shareCode: string;
@@ -20,6 +27,7 @@ export type PinboardComment = {
   viewportHeight: number;
   elementLabel?: string;
   text: string;
+  replies?: PinboardReply[];
   authorName: string;
   status: PinboardStatus;
   createdAt: number;
@@ -67,7 +75,13 @@ export type UpdateCommentStatusRequest = {
   status: PinboardStatus;
 };
 
+export type AddReplyRequest = {
+  shareCode: string;
+  commentId: string;
+  text: string;
+  authorName: string;
+};
+
 export function normalizeShareCode(value: string) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
-

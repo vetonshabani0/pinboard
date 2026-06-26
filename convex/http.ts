@@ -128,11 +128,33 @@ http.route({
   })
 });
 
+http.route({
+  path: "/api/comments/reply",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await readJson<{
+      shareCode: string;
+      commentId: string;
+      text: string;
+      authorName: string;
+    }>(request);
+
+    const result = await ctx.runMutation(api.comments.addReply, {
+      ...body,
+      commentId: body.commentId as Id<"comments">,
+      shareCode: body.shareCode.trim().toUpperCase()
+    });
+
+    return jsonResponse(result);
+  })
+});
+
 for (const path of [
   "/api/session/create",
   "/api/session/join",
   "/api/comments/list",
   "/api/comments/create",
+  "/api/comments/reply",
   "/api/comments/status"
 ]) {
   http.route({

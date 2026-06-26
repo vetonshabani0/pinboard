@@ -68,6 +68,7 @@ export const create = mutation({
       viewportHeight: args.viewportHeight,
       elementLabel: args.elementLabel,
       text: args.text.trim(),
+      replies: [],
       authorName: args.authorName.trim() || "Anonymous",
       status: "open",
       createdAt: now,
@@ -101,3 +102,35 @@ export const updateStatus = mutation({
   }
 });
 
+export const addReply = mutation({
+  args: {
+    shareCode: v.string(),
+    commentId: v.id("comments"),
+    text: v.string(),
+    authorName: v.string()
+  },
+  handler: async (ctx, args) => {
+    const session = await getSessionByShareCode(ctx, args.shareCode);
+    const comment = await ctx.db.get(args.commentId);
+
+    if (!comment || comment.sessionId !== session._id) {
+      throw new Error("Comment not found");
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.commentId, {
+      replies: [
+        ...(comment.replies || []),
+        {
+          id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+          text: args.text.trim(),
+          authorName: args.authorName.trim() || "Anonymous",
+          createdAt: now
+        }
+      ],
+      updatedAt: now
+    });
+
+    return { ok: true };
+  }
+});

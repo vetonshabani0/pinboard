@@ -65,6 +65,7 @@ function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [draft, setDraft] = useState<DraftPin | null>(null);
   const [draftText, setDraftText] = useState("");
+  const [replyText, setReplyText] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [docSize, setDocSize] = useState(getDocumentSize);
@@ -170,6 +171,46 @@ function App() {
     return () => document.removeEventListener("click", onClick, true);
   }, [isAdding]);
 
+  useEffect(() => {
+    const onMessage = (
+      message: { type?: string; commentId?: string },
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void
+    ) => {
+      if (message.type === "pinboard:startPin") {
+        setDraft(null);
+        setSelectedId(null);
+        setIsAdding(true);
+        sendResponse({ ok: true });
+        return true;
+      }
+
+      if (message.type === "pinboard:focusComment" && message.commentId) {
+        const comment = comments.find((item) => item.id === message.commentId);
+        setSelectedId(message.commentId);
+        setReplyText("");
+
+        if (comment) {
+          const x = (comment.xPercent / 100) * docSize.width;
+          const y = (comment.yPercent / 100) * docSize.height;
+          window.scrollTo({
+            left: Math.max(0, x - window.innerWidth / 2),
+            top: Math.max(0, y - window.innerHeight / 2),
+            behavior: "smooth"
+          });
+        }
+
+        sendResponse({ ok: true });
+        return true;
+      }
+
+      return false;
+    };
+
+    chrome.runtime.onMessage.addListener(onMessage);
+    return () => chrome.runtime.onMessage.removeListener(onMessage);
+  }, [comments, docSize.height, docSize.width]);
+
   const saveDraft = async () => {
     if (!draft || !settings.shareCode || !draftText.trim()) return;
 
@@ -186,6 +227,20 @@ function App() {
 
     setDraft(null);
     setDraftText("");
+    await loadComments();
+  };
+
+  const addReply = async (comment: PinboardComment) => {
+    if (!settings.shareCode || !replyText.trim()) return;
+
+    await pinboardApi("/api/comments/reply", {
+      shareCode: settings.shareCode,
+      commentId: comment.id,
+      text: replyText,
+      authorName: settings.authorName || "Anonymous"
+    });
+
+    setReplyText("");
     await loadComments();
   };
 
@@ -212,24 +267,17 @@ function App() {
       style={{ height: docSize.height, width: docSize.width }}
       data-pinboard-ui="true"
     >
-      <div className="pinboard-toolbar">
-        <strong>{settings.shareCode}</strong>
-        <button
-          className={`pinboard-button ${isAdding ? "is-active" : ""}`}
-          onClick={() => {
-            setDraft(null);
-            setSelectedId(null);
-            setIsAdding((value) => !value);
-          }}
-          type="button"
-        >
-          Pin
-        </button>
-        <button className="pinboard-button" onClick={() => void loadComments()} type="button">
-          Sync
-        </button>
-        {error ? <span className="pinboard-hint">{error}</span> : null}
-      </div>
+      {isAdding || error ? (
+        <div className="pinboard-toolbar">
+          <strong>{isAdding ? "Click the page to place a pin" : settings.shareCode}</strong>
+          {isAdding ? (
+            <button className="pinboard-button" onClick={() => setIsAdding(false)} type="button">
+              Cancel
+            </button>
+          ) : null}
+          {error ? <span className="pinboard-hint">{error}</span> : null}
+        </div>
+      ) : null}
 
       {comments.map((comment, index) => (
         <button
@@ -279,6 +327,25 @@ function App() {
             <span>{selected.status}</span>
           </div>
           <p>{selected.text}</p>
+          {(selected.replies || []).map((reply) => (
+            <div className="pinboard-reply" key={reply.id}>
+              <p>{reply.text}</p>
+              <span>{reply.authorName}</span>
+            </div>
+          ))}
+          <div className="pinboard-reply-box">
+            <input
+              onChange={(event) => setReplyText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void addReply(selected);
+              }}
+              placeholder="Reply"
+              value={replyText}
+            />
+            <button className="pinboard-button is-active" onClick={() => void addReply(selected)} type="button">
+              ↑
+            </button>
+          </div>
           <div className="pinboard-actions">
             <button className="pinboard-button" onClick={() => setSelectedId(null)} type="button">
               Close
