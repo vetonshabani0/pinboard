@@ -31,6 +31,8 @@ Copy the Convex site URL ending in `.convex.site` into `.env.local`:
 VITE_CONVEX_SITE_URL=https://your-deployment.convex.site
 ```
 
+If `npx convex dev` created `CONVEX_SITE_URL`, use the same value with the `VITE_` prefix for the browser apps.
+
 Then run:
 
 ```bash
@@ -48,4 +50,3 @@ Load `apps/extension/dist` in Chrome:
 ## Product Notes
 
 Pinboard intentionally uses a separate Convex project and schema. It should not share the Mentra database unless we later decide to integrate it as a Mentra product feature.
-
