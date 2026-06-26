@@ -14,6 +14,25 @@ async function getSessionByShareCode(ctx: any, shareCode: string) {
   return session;
 }
 
+function normalizeOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.replace(/^www\./, "");
+
+    return `${url.protocol}//${host}${url.port ? `:${url.port}` : ""}`;
+  } catch {
+    return origin.replace(/^https?:\/\/www\./, (match) => match.replace("www.", ""));
+  }
+}
+
+function normalizePath(path: string) {
+  const withoutQuery = path.split("?")[0] || "/";
+  const withoutTrailingSlash =
+    withoutQuery.length > 1 ? withoutQuery.replace(/\/+$/, "") : withoutQuery;
+
+  return withoutTrailingSlash || "/";
+}
+
 export const list = query({
   args: {
     shareCode: v.string(),
@@ -24,12 +43,16 @@ export const list = query({
     const session = await getSessionByShareCode(ctx, args.shareCode);
 
     if (args.origin && args.path) {
-      return await ctx.db
+      const origin = normalizeOrigin(args.origin);
+      const path = normalizePath(args.path);
+      const sessionComments = await ctx.db
         .query("comments")
-        .withIndex("by_session_and_path", (q) =>
-          q.eq("sessionId", session._id).eq("origin", args.origin!).eq("path", args.path!)
-        )
+        .withIndex("by_session", (q) => q.eq("sessionId", session._id))
         .collect();
+
+      return sessionComments.filter(
+        (comment) => normalizeOrigin(comment.origin) === origin && normalizePath(comment.path) === path
+      );
     }
 
     return await ctx.db
@@ -60,8 +83,8 @@ export const create = mutation({
     const id = await ctx.db.insert("comments", {
       sessionId: session._id,
       url: args.url,
-      origin: args.origin,
-      path: args.path,
+      origin: normalizeOrigin(args.origin),
+      path: normalizePath(args.path),
       xPercent: Math.max(0, Math.min(100, args.xPercent)),
       yPercent: Math.max(0, Math.min(100, args.yPercent)),
       viewportWidth: args.viewportWidth,

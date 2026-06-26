@@ -26,6 +26,7 @@ let selectedId: string | null = null;
 let placingPin = false;
 let draftPin: DraftPin | null = null;
 let draftText = "";
+let otherPageCount = 0;
 let refreshTimer: number | undefined;
 
 function pageMeta() {
@@ -55,6 +56,25 @@ function elementLabel(target: EventTarget | null) {
   const label = aria || text || target.id || target.tagName.toLowerCase();
 
   return label.slice(0, 120);
+}
+
+function normalizeOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.replace(/^www\./, "");
+
+    return `${url.protocol}//${host}${url.port ? `:${url.port}` : ""}`;
+  } catch {
+    return origin.replace(/^https?:\/\/www\./, (match) => match.replace("www.", ""));
+  }
+}
+
+function normalizePath(path: string) {
+  const withoutQuery = path.split("?")[0] || "/";
+  const withoutTrailingSlash =
+    withoutQuery.length > 1 ? withoutQuery.replace(/\/+$/, "") : withoutQuery;
+
+  return withoutTrailingSlash || "/";
 }
 
 function isPinboardTarget(target: EventTarget | null) {
@@ -130,6 +150,22 @@ async function loadComments() {
   });
 
   comments = response.comments.map(toComment).sort((a, b) => a.createdAt - b.createdAt);
+  otherPageCount = 0;
+
+  if (comments.length === 0) {
+    const all = await api<{ comments: ApiComment[] }>("/api/comments/list", {
+      shareCode: settings.shareCode
+    });
+    const currentOrigin = normalizeOrigin(page.origin);
+    const currentPath = normalizePath(page.path);
+    otherPageCount = all.comments.filter((comment) => {
+      return (
+        normalizeOrigin(comment.origin) === currentOrigin &&
+        normalizePath(comment.path) !== currentPath
+      );
+    }).length;
+  }
+
   render();
 }
 
@@ -392,7 +428,15 @@ function renderSession(panel: HTMLElement) {
   if (comments.length === 0) {
     const empty = make("div", "pinboard-empty-state");
     empty.append(make("strong", undefined, "No pins on this page yet"));
-    empty.append(make("span", undefined, "Add a pin here, or go to another page in this same session."));
+    empty.append(
+      make(
+        "span",
+        undefined,
+        otherPageCount > 0
+          ? `${otherPageCount} pin${otherPageCount === 1 ? "" : "s"} exist on another page in this same session.`
+          : "Add a pin here, or go to another page in this same session."
+      )
+    );
     list.append(empty);
   }
 
