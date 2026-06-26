@@ -1,14 +1,12 @@
 import { resolve } from "node:path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   envDir: "../..",
-  plugins: [react()],
   build: {
     emptyOutDir: false,
     lib: {
-      entry: resolve(__dirname, "src/content.tsx"),
+      entry: resolve(__dirname, "src/injected.ts"),
       name: "PinboardContent",
       formats: ["iife"],
       fileName: () => "assets/content.js",
