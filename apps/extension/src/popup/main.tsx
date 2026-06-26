@@ -172,14 +172,55 @@ function App() {
     }
   };
 
-  const sendToActiveTab = async (message: unknown) => {
-    const activePage = await loadActivePage();
-    if (!activePage.tabId) return;
+  const canAttachToPage = (activePage: ActivePage) => {
+    return Boolean(activePage.tabId && activePage.url && /^https?:\/\//.test(activePage.url));
+  };
+
+  const ensureContentScript = async (activePage: ActivePage) => {
+    if (!activePage.tabId) return false;
 
     try {
-      await chrome.tabs.sendMessage(activePage.tabId, message);
+      await chrome.tabs.sendMessage(activePage.tabId, { type: "pinboard:ping" });
+      return true;
     } catch {
-      setStatus("Reload the page once so Pinboard can attach.");
+      if (!canAttachToPage(activePage)) {
+        setStatus("Open a normal http/https webpage first.");
+        return false;
+      }
+
+      try {
+        await chrome.scripting.insertCSS({
+          target: { tabId: activePage.tabId },
+          files: ["assets/content.css"]
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId: activePage.tabId },
+          files: ["assets/content.js"]
+        });
+        return true;
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Pinboard could not attach to this page.");
+        return false;
+      }
+    }
+  };
+
+  const sendToActiveTab = async (message: unknown) => {
+    const activePage = await loadActivePage();
+    if (!activePage.tabId) {
+      setStatus("Open a webpage first.");
+      return false;
+    }
+
+    try {
+      const attached = await ensureContentScript(activePage);
+      if (!attached) return false;
+
+      await chrome.tabs.sendMessage(activePage.tabId, message);
+      return true;
+    } catch {
+      setStatus("Pinboard could not start on this page. Try reloading the tab.");
+      return false;
     }
   };
 
@@ -190,10 +231,10 @@ function App() {
     }
 
     await saveSettings({ enabled: true });
-    await sendToActiveTab({
+    const started = await sendToActiveTab({
       type: "pinboard:startPin"
     });
-    setStatus("Click the page to place a pin.");
+    if (started) setStatus("Click the page to place a pin.");
   };
 
   const focusComment = async (commentId: string) => {

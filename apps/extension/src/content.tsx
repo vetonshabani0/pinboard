@@ -177,6 +177,11 @@ function App() {
       _sender: chrome.runtime.MessageSender,
       sendResponse: (response?: unknown) => void
     ) => {
+      if (message.type === "pinboard:ping") {
+        sendResponse({ ok: true });
+        return true;
+      }
+
       if (message.type === "pinboard:startPin") {
         setDraft(null);
         setSelectedId(null);
