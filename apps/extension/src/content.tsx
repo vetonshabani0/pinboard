@@ -173,6 +173,7 @@ function App() {
       if (changes[openPanelKey]?.newValue) {
         setPanelOpen(true);
         void chrome.storage.local.remove(openPanelKey);
+        return;
       }
 
       void loadSettings();

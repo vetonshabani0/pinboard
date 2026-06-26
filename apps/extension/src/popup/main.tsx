@@ -85,8 +85,9 @@ function App() {
 
       await chrome.storage.local.set({ [OPEN_PANEL_KEY]: Date.now() });
       await ensureContentScript(tab);
+      await chrome.storage.local.set({ [OPEN_PANEL_KEY]: Date.now() });
       setStatus("Pinboard opened on the page.");
-      window.setTimeout(() => window.close(), 250);
+      window.setTimeout(() => window.close(), 900);
     } catch (error) {
       setCanRetry(true);
       setStatus(error instanceof Error ? error.message : "Could not open Pinboard.");
