@@ -47,6 +47,11 @@
   color: #0f172a;
 }
 
+.pinboard-pin.is-draft {
+  background: #f59e0b;
+  color: #111827;
+}
+
 .pinboard-placement-hint,
 .pinboard-composer,
 .pinboard-popover,
@@ -416,4 +421,3 @@ body.pinboard-pin-cursor * {
       14 26,
     pointer !important;
 }
-

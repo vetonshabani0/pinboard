@@ -9,6 +9,14 @@ type Settings = {
 
 type ApiComment = PinboardComment & { _id?: string };
 
+type DraftPin = {
+  pageX: number;
+  pageY: number;
+  xPercent: number;
+  yPercent: number;
+  elementLabel?: string;
+};
+
 const rootId = "pinboard-extension-root";
 const pinCursorClass = "pinboard-pin-cursor";
 
@@ -16,6 +24,8 @@ let settings: Settings = {};
 let comments: PinboardComment[] = [];
 let selectedId: string | null = null;
 let placingPin = false;
+let draftPin: DraftPin | null = null;
+let draftText = "";
 let refreshTimer: number | undefined;
 
 function pageMeta() {
@@ -180,6 +190,61 @@ function renderPins(container: HTMLElement) {
     pin.append(label);
     container.append(pin);
   });
+}
+
+function renderDraft(container: HTMLElement) {
+  if (!draftPin) return;
+
+  const pin = makeButton("pinboard-pin is-draft", "", () => undefined);
+  pin.style.left = `${draftPin.xPercent}%`;
+  pin.style.top = `${draftPin.yPercent}%`;
+  pin.title = "Unsaved comment";
+  pin.append(make("span", undefined, "+"));
+  container.append(pin);
+
+  const composer = make("div", "pinboard-composer");
+  composer.style.left = `${draftPin.pageX}px`;
+  composer.style.top = `${draftPin.pageY}px`;
+  composer.append(make("div", "pinboard-composer-title", "Add comment"));
+
+  const textarea = make("textarea");
+  textarea.placeholder = "What should change here?";
+  textarea.value = draftText;
+  textarea.addEventListener("input", () => {
+    draftText = textarea.value;
+  });
+  composer.append(textarea);
+
+  const actions = make("div", "pinboard-actions");
+  actions.append(
+    makeButton("pinboard-button", "Cancel", () => {
+      draftPin = null;
+      draftText = "";
+      render();
+    })
+  );
+  actions.append(
+    makeButton("pinboard-button is-active", "Save", async () => {
+      if (!settings.shareCode || !draftPin || !draftText.trim()) return;
+
+      await api("/api/comments/create", {
+        shareCode: settings.shareCode,
+        ...pageMeta(),
+        xPercent: draftPin.xPercent,
+        yPercent: draftPin.yPercent,
+        elementLabel: draftPin.elementLabel,
+        text: draftText,
+        authorName: settings.authorName || "Anonymous"
+      });
+
+      draftPin = null;
+      draftText = "";
+      await loadComments();
+    })
+  );
+  composer.append(actions);
+  container.append(composer);
+  window.setTimeout(() => textarea.focus(), 0);
 }
 
 function renderSelected(container: HTMLElement) {
@@ -413,42 +478,6 @@ function stopPinPlacement() {
   render();
 }
 
-function showComposer(pageX: number, pageY: number, xPercent: number, yPercent: number, label?: string) {
-  root()?.querySelector(".pinboard-placement-hint")?.remove();
-  const composer = make("div", "pinboard-composer");
-  composer.style.left = `${pageX}px`;
-  composer.style.top = `${pageY}px`;
-  composer.append(make("div", "pinboard-composer-title", "Add comment"));
-
-  const textarea = make("textarea");
-  textarea.placeholder = "What should change here?";
-  composer.append(textarea);
-
-  const actions = make("div", "pinboard-actions");
-  actions.append(makeButton("pinboard-button", "Cancel", () => {
-    composer.remove();
-    render();
-  }));
-  actions.append(makeButton("pinboard-button is-active", "Save", async () => {
-    if (!settings.shareCode || !textarea.value.trim()) return;
-
-    await api("/api/comments/create", {
-      shareCode: settings.shareCode,
-      ...pageMeta(),
-      xPercent,
-      yPercent,
-      elementLabel: label,
-      text: textarea.value,
-      authorName: settings.authorName || "Anonymous"
-    });
-    composer.remove();
-    await loadComments();
-  }));
-  composer.append(actions);
-  root()?.append(composer);
-  textarea.focus();
-}
-
 function onDocumentClick(event: MouseEvent) {
   if (!placingPin || isPinboardTarget(event.target)) return;
 
@@ -459,13 +488,15 @@ function onDocumentClick(event: MouseEvent) {
   document.body.classList.remove(pinCursorClass);
 
   const size = documentSize();
-  showComposer(
-    event.pageX,
-    event.pageY,
-    (event.pageX / size.width) * 100,
-    (event.pageY / size.height) * 100,
-    elementLabel(event.target)
-  );
+  draftPin = {
+    pageX: event.pageX,
+    pageY: event.pageY,
+    xPercent: (event.pageX / size.width) * 100,
+    yPercent: (event.pageY / size.height) * 100,
+    elementLabel: elementLabel(event.target)
+  };
+  draftText = "";
+  render();
 }
 
 function render() {
@@ -479,10 +510,13 @@ function render() {
 
   if (settings.shareCode) {
     renderPins(container);
+    renderDraft(container);
     renderSelected(container);
   }
 
-  renderPanel(container);
+  if (!placingPin && !draftPin) {
+    renderPanel(container);
+  }
 }
 
 async function init() {
