@@ -6,14 +6,11 @@
   "action": {
     "default_title": "Pinboard"
   },
-  "side_panel": {
-    "default_path": "popup.html"
-  },
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"
   },
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "tabs"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {

@@ -13,59 +13,12 @@
   box-sizing: border-box;
 }
 
-.pinboard-toolbar,
+.pinboard-pin,
+.pinboard-placement-hint,
 .pinboard-composer,
-.pinboard-popover {
-  color: #f8fafc;
+.pinboard-popover,
+.pinboard-panel {
   pointer-events: auto;
-}
-
-.pinboard-toolbar {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
-  backdrop-filter: blur(18px);
-}
-
-.pinboard-toolbar strong {
-  max-width: 92px;
-  overflow: hidden;
-  color: #0f172a;
-  font-size: 12px;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pinboard-button {
-  min-height: 30px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #0f172a;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  line-height: 1;
-  padding: 0 10px;
-}
-
-.pinboard-button:hover {
-  background: #f1f5f9;
-}
-
-.pinboard-button.is-active {
-  border-color: #0f766e;
-  background: #0f766e;
-  color: #ffffff;
 }
 
 .pinboard-pin {
@@ -82,7 +35,6 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
-  pointer-events: auto;
   transform: translate(-50%, -100%) rotate(-45deg);
 }
 
@@ -95,14 +47,41 @@
   color: #0f172a;
 }
 
+.pinboard-placement-hint,
+.pinboard-composer,
+.pinboard-popover,
+.pinboard-panel {
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+  color: #0f172a;
+}
+
+.pinboard-placement-hint {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.pinboard-placement-hint strong {
+  font-size: 13px;
+}
+
+.pinboard-placement-hint span {
+  color: #64748b;
+  font-size: 12px;
+}
+
 .pinboard-composer,
 .pinboard-popover {
   position: absolute;
   width: min(320px, calc(100vw - 32px));
-  border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
   padding: 12px;
   transform: translate(12px, 12px);
 }
@@ -115,11 +94,12 @@
 }
 
 .pinboard-composer textarea,
-.pinboard-reply-box input {
+.pinboard-reply-box input,
+.pinboard-field input {
   display: block;
   width: 100%;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #ffffff;
   color: #0f172a;
   font: inherit;
@@ -129,16 +109,74 @@
   padding: 10px;
 }
 
+.pinboard-field input {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
 .pinboard-composer textarea {
   min-height: 104px;
   resize: vertical;
 }
 
-.pinboard-actions {
+.pinboard-actions,
+.pinboard-button-row,
+.pinboard-comment-card-top,
+.pinboard-comment-meta,
+.pinboard-active-session div:first-child,
+.pinboard-comment-toolbar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pinboard-actions {
   justify-content: flex-end;
-  gap: 8px;
   margin-top: 10px;
+}
+
+.pinboard-button,
+.pinboard-primary-button,
+.pinboard-secondary-button,
+.pinboard-icon-button,
+.pinboard-text-button {
+  cursor: pointer;
+  font: inherit;
+}
+
+.pinboard-button,
+.pinboard-primary-button,
+.pinboard-secondary-button {
+  min-height: 36px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.pinboard-button,
+.pinboard-secondary-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.pinboard-button:hover,
+.pinboard-secondary-button:hover {
+  background: #f1f5f9;
+}
+
+.pinboard-button.is-active,
+.pinboard-primary-button {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.pinboard-button.is-active:hover,
+.pinboard-primary-button:hover {
+  background: #1d4ed8;
 }
 
 .pinboard-popover p {
@@ -147,33 +185,6 @@
   font-size: 13px;
   line-height: 1.45;
   white-space: pre-wrap;
-}
-
-.pinboard-reply {
-  border-left: 2px solid #bfdbfe;
-  margin: 0 0 10px;
-  padding-left: 10px;
-}
-
-.pinboard-reply p {
-  margin-bottom: 2px;
-}
-
-.pinboard-reply span {
-  color: #64748b;
-  font-size: 11px;
-}
-
-.pinboard-reply-box {
-  display: grid;
-  grid-template-columns: 1fr 36px;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.pinboard-reply-box input {
-  min-height: 36px;
-  padding: 0 10px;
 }
 
 .pinboard-meta {
@@ -185,9 +196,217 @@
   font-size: 11px;
 }
 
-.pinboard-hint {
-  color: #0f766e;
+.pinboard-reply,
+.pinboard-panel-reply {
+  border-left: 2px solid #bfdbfe;
+  margin: 0 0 10px;
+  padding-left: 10px;
+}
+
+.pinboard-reply p,
+.pinboard-panel-reply p {
+  margin-bottom: 2px;
+}
+
+.pinboard-reply span,
+.pinboard-panel-reply span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.pinboard-reply-box {
+  display: grid;
+  grid-template-columns: 1fr 36px;
+  gap: 8px;
+}
+
+.pinboard-reply-box input {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.pinboard-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 14px;
+  width: min(390px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.pinboard-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.pinboard-panel h2,
+.pinboard-panel p {
+  margin: 0;
+}
+
+.pinboard-panel h2 {
+  color: #0f172a;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.pinboard-panel header p,
+.pinboard-status,
+.pinboard-comment-toolbar span,
+.pinboard-comment-meta,
+.pinboard-active-session span,
+.pinboard-empty-state span {
+  color: #64748b;
   font-size: 12px;
+}
+
+.pinboard-field {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.pinboard-active-session,
+.pinboard-setup {
+  display: grid;
+  gap: 10px;
+}
+
+.pinboard-active-session {
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  padding: 12px;
+}
+
+.pinboard-active-session strong {
+  color: #1e40af;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+}
+
+.pinboard-button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.pinboard-comment-toolbar {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+
+.pinboard-comment-toolbar div {
+  display: grid;
+  gap: 2px;
+}
+
+.pinboard-comment-toolbar strong {
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.pinboard-comment-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.pinboard-comment-list article {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  padding: 12px;
+}
+
+.pinboard-comment-list article.is-selected {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.pinboard-comment-card-top span {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pinboard-comment-list article > p {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.pinboard-text-button,
+.pinboard-icon-button {
+  border: 0;
+  background: transparent;
+}
+
+.pinboard-text-button {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0;
+}
+
+.pinboard-icon-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.pinboard-icon-button:hover {
+  background: #f1f5f9;
+}
+
+.pinboard-icon-button.is-send {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.pinboard-empty-state {
+  display: grid;
+  gap: 4px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  padding: 16px;
+}
+
+.pinboard-empty-state strong {
+  color: #0f172a;
+}
+
+.pinboard-status {
+  font-weight: 800;
 }
 
 body.pinboard-pin-cursor,
@@ -197,3 +416,4 @@ body.pinboard-pin-cursor * {
       14 26,
     pointer !important;
 }
+
