@@ -107,6 +107,13 @@
   transform: translate(12px, 12px);
 }
 
+.pinboard-composer-title {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
 .pinboard-composer textarea,
 .pinboard-reply-box input {
   display: block;
@@ -183,7 +190,10 @@
   font-size: 12px;
 }
 
-body.pinboard-crosshair,
-body.pinboard-crosshair * {
-  cursor: crosshair !important;
+body.pinboard-pin-cursor,
+body.pinboard-pin-cursor * {
+  cursor:
+    url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 2C9.03 2 5 6.03 5 11c0 6.75 9 15 9 15s9-8.25 9-15c0-4.97-4.03-9-9-9Z' fill='%232dd4bf' stroke='%230f172a' stroke-width='2'/%3E%3Ccircle cx='14' cy='11' r='3.5' fill='white' stroke='%230f172a' stroke-width='1.5'/%3E%3C/svg%3E")
+      14 26,
+    pointer !important;
 }

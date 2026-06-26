@@ -143,8 +143,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    document.body.classList.toggle("pinboard-crosshair", isAdding);
-    return () => document.body.classList.remove("pinboard-crosshair");
+    document.body.classList.toggle("pinboard-pin-cursor", isAdding);
+    return () => document.body.classList.remove("pinboard-pin-cursor");
   }, [isAdding]);
 
   useEffect(() => {
@@ -297,6 +297,7 @@ function App() {
 
       {draft ? (
         <div className="pinboard-composer" style={{ left: draft.pageX, top: draft.pageY }}>
+          <div className="pinboard-composer-title">Add comment</div>
           <textarea
             autoFocus
             onChange={(event) => setDraftText(event.target.value)}
