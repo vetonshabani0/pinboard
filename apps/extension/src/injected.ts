@@ -39,6 +39,8 @@ let draftPin: DraftPin | null = null;
 let draftText = "";
 let otherPageCount = 0;
 let refreshTimer: number | undefined;
+let pendingRender: number | undefined;
+let domObserver: MutationObserver | undefined;
 
 function pageMeta() {
   return {
@@ -126,10 +128,16 @@ function cssSelector(el: Element | null): string | undefined {
   return undefined;
 }
 
-// Resolve a stored pin to absolute document coordinates (px). Prefers the live
-// element it was anchored to; falls back to the page percentage when the
-// element is missing or has no box (e.g. removed, hidden, or layout changed).
-function anchorFor(item: Anchorable): { x: number; y: number } {
+// Resolve a stored pin to absolute document coordinates (px).
+//
+// - Anchored pin (has a selector): position it against the live element's
+//   current box. If that element isn't on the page right now (e.g. it lives
+//   inside a closed dropdown/modal/tab, or was removed), return null so the
+//   caller HIDES the pin instead of floating it over unrelated content. The
+//   comment still shows in the side panel, and the pin reappears glued to the
+//   element the moment it is visible again.
+// - Legacy pin (no selector): fall back to the stored page percentage.
+function anchorFor(item: Anchorable): { x: number; y: number } | null {
   if (item.selector) {
     let el: Element | null = null;
     try {
@@ -147,6 +155,9 @@ function anchorFor(item: Anchorable): { x: number; y: number } {
         };
       }
     }
+
+    // Anchored, but the target isn't currently rendered/visible → hide.
+    return null;
   }
 
   const size = documentSize();
@@ -307,6 +318,9 @@ function makeInput(value: string, placeholder: string, onInput: (value: string) 
 
 function renderPins(container: HTMLElement) {
   comments.forEach((comment, index) => {
+    const anchor = anchorFor(comment);
+    if (!anchor) return; // anchored element not visible right now → hide pin
+
     const pin = makeButton(
       `pinboard-pin ${comment.status === "resolved" ? "is-resolved" : ""}`,
       String(index + 1),
@@ -315,7 +329,6 @@ function renderPins(container: HTMLElement) {
         render();
       }
     );
-    const anchor = anchorFor(comment);
     pin.style.left = `${anchor.x}px`;
     pin.style.top = `${anchor.y}px`;
     pin.title = comment.text;
@@ -330,7 +343,7 @@ function renderPins(container: HTMLElement) {
 function renderDraft(container: HTMLElement) {
   if (!draftPin) return;
 
-  const anchor = anchorFor(draftPin);
+  const anchor = anchorFor(draftPin) ?? { x: draftPin.pageX, y: draftPin.pageY };
   const pin = makeButton("pinboard-pin is-draft", "", () => undefined);
   pin.style.left = `${anchor.x}px`;
   pin.style.top = `${anchor.y}px`;
@@ -391,6 +404,8 @@ function renderSelected(container: HTMLElement) {
   if (!selected) return;
 
   const anchor = anchorFor(selected);
+  if (!anchor) return; // pin hidden (element not visible) → no floating popover
+
   const popover = make("div", "pinboard-popover");
   popover.style.left = `${anchor.x}px`;
   popover.style.top = `${anchor.y}px`;
@@ -551,8 +566,15 @@ function renderSession(panel: HTMLElement) {
       render();
     });
 
+    const hidden = Boolean(comment.selector) && !anchorFor(comment);
     const top = make("div", "pinboard-comment-card-top");
-    top.append(make("span", undefined, `#${index + 1} · ${comment.elementLabel || "Page"}`));
+    top.append(
+      make(
+        "span",
+        undefined,
+        `#${index + 1} · ${comment.elementLabel || "Page"}${hidden ? " · hidden" : ""}`
+      )
+    );
     top.append(makeButton("pinboard-text-button", comment.status === "resolved" ? "Reopen" : "Resolve", async () => {
       if (!settings.shareCode) return;
       await api("/api/comments/status", {
@@ -681,6 +703,28 @@ function render() {
   }
 }
 
+// Debounced re-render used when the page mutates (dropdowns/modals/tabs
+// opening or closing), so anchored pins appear/disappear in step with their
+// target elements instead of waiting for the next poll.
+function scheduleRender() {
+  if (pendingRender) return;
+
+  pendingRender = window.setTimeout(() => {
+    pendingRender = undefined;
+
+    // Don't rebuild mid-placement — render() would wipe the placement hint.
+    if (placingPin) return;
+
+    // Never tear down the overlay while the user is typing inside it — a full
+    // re-render would drop focus and the caret in the composer/reply inputs.
+    const container = root();
+    const active = document.activeElement;
+    if (container && active instanceof Node && container.contains(active)) return;
+
+    render();
+  }, 120);
+}
+
 async function init() {
   document.getElementById(rootId)?.remove();
   document.body.classList.remove(pinCursorClass);
@@ -695,6 +739,23 @@ async function init() {
   window.addEventListener("resize", render);
   window.addEventListener("scroll", render, { passive: true });
 
+  // Re-position/show/hide pins when the page's own DOM changes (e.g. a dropdown
+  // or modal opens or closes). Mutations inside our own overlay are ignored so
+  // render() — which rewrites the overlay — can't trigger an infinite loop.
+  domObserver = new MutationObserver((mutations) => {
+    const container = root();
+    const fromPage = mutations.some(
+      (mutation) => !(container && container.contains(mutation.target))
+    );
+    if (fromPage) scheduleRender();
+  });
+  domObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["style", "class", "hidden", "open"]
+  });
+
   await loadSettings();
   await loadComments();
 
@@ -707,6 +768,8 @@ void init();
 
 window.addEventListener("beforeunload", () => {
   if (refreshTimer) window.clearInterval(refreshTimer);
+  if (pendingRender) window.clearTimeout(pendingRender);
+  domObserver?.disconnect();
   document.removeEventListener("click", onDocumentClick, true);
   window.removeEventListener("resize", render);
   window.removeEventListener("scroll", render);
