@@ -95,6 +95,9 @@ http.route({
       viewportWidth: number;
       viewportHeight: number;
       elementLabel?: string;
+      selector?: string;
+      relX?: number;
+      relY?: number;
       text: string;
       authorName: string;
     }>(request);

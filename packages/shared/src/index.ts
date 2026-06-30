@@ -26,6 +26,9 @@ export type PinboardComment = {
   viewportWidth: number;
   viewportHeight: number;
   elementLabel?: string;
+  selector?: string;
+  relX?: number;
+  relY?: number;
   text: string;
   replies?: PinboardReply[];
   authorName: string;
@@ -65,6 +68,9 @@ export type CreateCommentRequest = {
   viewportWidth: number;
   viewportHeight: number;
   elementLabel?: string;
+  selector?: string;
+  relX?: number;
+  relY?: number;
   text: string;
   authorName: string;
 };

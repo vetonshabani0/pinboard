@@ -15,6 +15,17 @@ type DraftPin = {
   xPercent: number;
   yPercent: number;
   elementLabel?: string;
+  selector?: string;
+  relX?: number;
+  relY?: number;
+};
+
+type Anchorable = {
+  selector?: string;
+  relX?: number;
+  relY?: number;
+  xPercent: number;
+  yPercent: number;
 };
 
 const rootId = "pinboard-extension-root";
@@ -56,6 +67,93 @@ function elementLabel(target: EventTarget | null) {
   const label = aria || text || target.id || target.tagName.toLowerCase();
 
   return label.slice(0, 120);
+}
+
+const cssEscape = (value: string) =>
+  typeof CSS !== "undefined" && typeof CSS.escape === "function"
+    ? CSS.escape(value)
+    : value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+
+// An id is only useful as an anchor if it is stable across renders/builds.
+// Framework-generated ids (React's ":r1:", Radix "radix-:r3:", random hashes)
+// are rejected so we fall back to a structural path instead.
+function isStableId(id: string) {
+  if (!id || id.length > 50 || id.includes(":")) return false;
+  if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(id)) return false;
+  return true;
+}
+
+// Build a structural CSS selector (tag + nth-of-type path, anchored at the
+// nearest stable id) that points at the clicked element. Returns undefined if
+// the resulting selector does not resolve back to the same element.
+function cssSelector(el: Element | null): string | undefined {
+  if (!(el instanceof Element)) return undefined;
+
+  const parts: string[] = [];
+  let node: Element | null = el;
+
+  while (node && node !== document.body && node !== document.documentElement) {
+    const id = node.getAttribute("id");
+    if (id && isStableId(id)) {
+      parts.unshift(`#${cssEscape(id)}`);
+      break;
+    }
+
+    let part = node.tagName.toLowerCase();
+    const parent: Element | null = node.parentElement;
+    if (parent) {
+      const sameTag = Array.from(parent.children).filter(
+        (child) => child.tagName === node!.tagName
+      );
+      if (sameTag.length > 1) {
+        part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
+      }
+    }
+
+    parts.unshift(part);
+    node = parent;
+  }
+
+  if (parts.length === 0) return undefined;
+
+  const selector = parts.join(" > ");
+  try {
+    if (document.querySelector(selector) === el) return selector;
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+// Resolve a stored pin to absolute document coordinates (px). Prefers the live
+// element it was anchored to; falls back to the page percentage when the
+// element is missing or has no box (e.g. removed, hidden, or layout changed).
+function anchorFor(item: Anchorable): { x: number; y: number } {
+  if (item.selector) {
+    let el: Element | null = null;
+    try {
+      el = document.querySelector(item.selector);
+    } catch {
+      el = null;
+    }
+
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 || rect.height > 0) {
+        return {
+          x: rect.left + window.scrollX + (item.relX ?? 0.5) * rect.width,
+          y: rect.top + window.scrollY + (item.relY ?? 0.5) * rect.height
+        };
+      }
+    }
+  }
+
+  const size = documentSize();
+  return {
+    x: (item.xPercent / 100) * size.width,
+    y: (item.yPercent / 100) * size.height
+  };
 }
 
 function normalizeOrigin(origin: string) {
@@ -217,8 +315,9 @@ function renderPins(container: HTMLElement) {
         render();
       }
     );
-    pin.style.left = `${comment.xPercent}%`;
-    pin.style.top = `${comment.yPercent}%`;
+    const anchor = anchorFor(comment);
+    pin.style.left = `${anchor.x}px`;
+    pin.style.top = `${anchor.y}px`;
     pin.title = comment.text;
 
     const label = make("span", undefined, String(index + 1));
@@ -231,16 +330,17 @@ function renderPins(container: HTMLElement) {
 function renderDraft(container: HTMLElement) {
   if (!draftPin) return;
 
+  const anchor = anchorFor(draftPin);
   const pin = makeButton("pinboard-pin is-draft", "", () => undefined);
-  pin.style.left = `${draftPin.xPercent}%`;
-  pin.style.top = `${draftPin.yPercent}%`;
+  pin.style.left = `${anchor.x}px`;
+  pin.style.top = `${anchor.y}px`;
   pin.title = "Unsaved comment";
   pin.append(make("span", undefined, "+"));
   container.append(pin);
 
   const composer = make("div", "pinboard-composer");
-  composer.style.left = `${draftPin.pageX}px`;
-  composer.style.top = `${draftPin.pageY}px`;
+  composer.style.left = `${anchor.x}px`;
+  composer.style.top = `${anchor.y}px`;
   composer.append(make("div", "pinboard-composer-title", "Add comment"));
 
   const textarea = make("textarea");
@@ -269,6 +369,9 @@ function renderDraft(container: HTMLElement) {
         xPercent: draftPin.xPercent,
         yPercent: draftPin.yPercent,
         elementLabel: draftPin.elementLabel,
+        selector: draftPin.selector,
+        relX: draftPin.relX,
+        relY: draftPin.relY,
         text: draftText,
         authorName: settings.authorName || "Anonymous"
       });
@@ -287,9 +390,10 @@ function renderSelected(container: HTMLElement) {
   const selected = comments.find((comment) => comment.id === selectedId);
   if (!selected) return;
 
+  const anchor = anchorFor(selected);
   const popover = make("div", "pinboard-popover");
-  popover.style.left = `${selected.xPercent}%`;
-  popover.style.top = `${selected.yPercent}%`;
+  popover.style.left = `${anchor.x}px`;
+  popover.style.top = `${anchor.y}px`;
 
   const meta = make("div", "pinboard-meta");
   meta.append(make("span", undefined, selected.authorName));
@@ -532,12 +636,26 @@ function onDocumentClick(event: MouseEvent) {
   document.body.classList.remove(pinCursorClass);
 
   const size = documentSize();
+  const target = event.target instanceof Element ? event.target : null;
+  const selector = cssSelector(target);
+
+  let relX: number | undefined;
+  let relY: number | undefined;
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    if (rect.width > 0) relX = (event.clientX - rect.left) / rect.width;
+    if (rect.height > 0) relY = (event.clientY - rect.top) / rect.height;
+  }
+
   draftPin = {
     pageX: event.pageX,
     pageY: event.pageY,
     xPercent: (event.pageX / size.width) * 100,
     yPercent: (event.pageY / size.height) * 100,
-    elementLabel: elementLabel(event.target)
+    elementLabel: elementLabel(event.target),
+    selector,
+    relX,
+    relY
   };
   draftText = "";
   render();

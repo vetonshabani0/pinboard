@@ -20,6 +20,9 @@ export default defineSchema({
     viewportWidth: v.number(),
     viewportHeight: v.number(),
     elementLabel: v.optional(v.string()),
+    selector: v.optional(v.string()),
+    relX: v.optional(v.number()),
+    relY: v.optional(v.number()),
     text: v.string(),
     replies: v.optional(
       v.array(
